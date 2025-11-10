@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bug Bounty Testing Suite</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .warning-banner {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            height: fit-content;
+        }
+
+        .tool-item {
+            padding: 15px;
+            margin: 10px 0;
+            background: #f7fafc;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .tool-item:hover {
+            background: #e6f2ff;
+            border-left: 4px solid #667eea;
+            transform: translateX(5px);
+        }
+
+        .tool-item.active {
+            background: #667eea;
+            color: white;
+            border-left: 4px solid #764ba2;
+        }
+
+        .tool-name {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .tool-desc {
+            font-size: 0.85em;
+            opacity: 0.8;
+        }
+
+        .main-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .tab:hover {
+            background: #f7fafc;
+        }
+
+        .tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .option-group {
+            margin: 15px 0;
+        }
+
+        .option-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .option-group input,
+        .option-group select,
+        .option-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .option-group input:focus,
+        .option-group select:focus,
+        .option-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .run-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin: 20px 0;
+            transition: transform 0.2s ease;
+        }
+
+        .run-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .export-btn {
+            background: #51cf66;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: all 0.3s ease;
+        }
+
+        .export-btn:hover {
+            background: #40c057;
+        }
+
+        .terminal {
+            background: #1a202c;
+            color: #68d391;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            min-height: 400px;
+            max-height: 600px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .terminal-header {
+            background: #2d3748;
+            padding: 10px;
+            border-radius: 10px 10px 0 0;
+            margin: -20px -20px 15px -20px;
+            color: #cbd5e0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .dot-red { background: #ff5f56; }
+        .dot-yellow { background: #ffbd2e; }
+        .dot-green { background: #27c93f; }
+
+        .terminal-line {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+
+        .terminal-prompt { color: #a78bfa; }
+        .terminal-output { color: #68d391; }
+        .terminal-error { color: #fc8181; }
+        .terminal-info { color: #63b3ed; }
+
+        .clear-btn {
+            background: #e53e3e;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: auto;
+        }
+
+        .info-box {
+            background: #ebf8ff;
+            border-left: 4px solid #4299e1;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+
+        .info-box h4 {
+            color: #2c5282;
+            margin-bottom: 8px;
+        }
+
+        .result-item {
+            background: #f7fafc;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-item pre {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔒 Bug Bounty Testing Suite</h1>
+            <p>Professional Security Testing Tools</p>
+        </header>
+
+        <div class="warning-banner">
+            ⚠️ AUTHORIZED TESTING ONLY - Always ensure you have written permission before testing!
+        </div>
+
+        <div class="main-grid">
+            <div class="sidebar">
+                <h3 style="margin-bottom: 15px; color: #667eea;">Tools</h3>
+               
+                <div class="tool-item active" data-tool="headers">
+                    <div class="tool-name">📋 Security Headers</div>
+                    <div class="tool-desc">Check HTTP headers (REAL)</div>
+                </div>
+
+                <div class="tool-item" data-tool="tech">
+                    <div class="tool-name">🔧 Tech Detector</div>
+                    <div class="tool-desc">Identify technologies (REAL)</div>
+                </div>
+
+                <div class="tool-item" data-tool="ssl">
+                    <div class="tool-name">🔐 SSL Checker</div>
+                    <div class="tool-desc">Verify HTTPS (REAL)</div>
+                </div>
+
+                <div class="tool-item" data-tool="nmap">
+                    <div class="tool-name">🔍 Nmap</div>
+                    <div class="tool-desc">Port scanning (Demo)</div>
+                </div>
+
+                <div class="tool-item" data-tool="subfinder">
+                    <div class="tool-name">🌐 Subfinder</div>
+                    <div class="tool-desc">Subdomain enum (Demo)</div>
+                </div>
+
+                <div class="tool-item" data-tool="sqlmap">
+                    <div class="tool-name">💉 SQLMap</div>
+                    <div class="tool-desc">SQL injection (Demo)</div>
+                </div>
+
+                <div class="tool-item" data-tool="xss">
+                    <div class="tool-name">🚨 XSS Scanner</div>
+                    <div class="tool-desc">XSS detection (Demo)</div>
+                </div>
+
+                <div class="tool-item" data-tool="dirb">
+                    <div class="tool-name">📁 Directory Brute</div>
+                    <div class="tool-desc">Find hidden paths (Demo)</div>
+                </div>
+            </div>
+
+            <div class="main-panel">
+                <div class="tabs">
+                    <div class="tab active" data-tab="config">⚙️ Configuration</div>
+                    <div class="tab" data-tab="results">📊 Results</div>
+                    <div class="tab" data-tab="notes">📝 Notes</div>
+                </div>
+
+                <div id="tab-config" class="tab-content active">
+                    <div id="tool-content"></div>
+                </div>
+
+                <div id="tab-results" class="tab-content">
+                    <h2>Test Results</h2>
+                    <div id="results-container">
+                        <p style="color: #666;">Run tests to see results here...</p>
+                    </div>
+                    <button class="export-btn" onclick="exportResults('json')">📥 Export JSON</button>
+                    <button class="export-btn" onclick="exportResults('txt')">📥 Export TXT</button>
+                </div>
+
+                <div id="tab-notes" class="tab-content">
+                    <h2>Session Notes</h2>
+                    <textarea id="notes-area" rows="15" placeholder="Take notes about your findings..."></textarea>
+                    <br>
+                    <button class="export-btn" onclick="saveNotes()">💾 Save Notes</button>
+                </div>
+
+                <div class="terminal">
+                    <div class="terminal-header">
+                        <span class="terminal-dot dot-red"></span>
+                        <span class="terminal-dot dot-yellow"></span>
+                        <span class="terminal-dot dot-green"></span>
+                        <span style="margin-left: 10px;">Terminal Output</span>
+                        <button class="clear-btn" onclick="clearTerminal()">Clear</button>
+                    </div>
+                    <div id="terminal-output">
+                        <div class="terminal-line terminal-info">Welcome to Bug Bounty Testing Suite</div>
+                        <div class="terminal-line terminal-info">🟢 Real tools: Security Headers, Tech Detector, SSL Checker</div>
+                        <div class="terminal-line terminal-info">🔵 Demo tools: Nmap, Subfinder, SQLMap, XSS, Directory Brute</div>
+                        <div class="terminal-line terminal-prompt">$</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTool = 'headers';
+        let testResults = [];
+
+        const tools = {
+            headers: {
+                title: '📋 Security Headers Analyzer',
+                desc: 'Checks HTTP security headers (REAL - Makes actual requests)',
+                html: `
+                    <h2>📋 Security Headers Analyzer</h2>
+                    <p style="color: #666; margin: 10px 0;">Analyze HTTP security headers of any website</p>
+                    <div class="option-group">
+                        <label>Target URL:</label>
+                        <input type="text" id="target-url" placeholder="https://example.com" value="https://example.com">
+                    </div>
+                    <div class="info-box">
+                        <h4>✅ This tool makes REAL requests</h4>
+                        <p>Checks: HSTS, CSP, X-Frame-Options, X-Content-Type-Options, etc.</p>
+                    </div>
+                    <button class="run-btn" onclick="runTool()">▶ Check Headers</button>
+                `,
+                run: checkHeaders
+            },
+            tech: {
+                title: '🔧 Technology Detector',
+                desc: 'Identifies web technologies (REAL - Makes actual requests)',
+                html: `
+                    <h2>🔧 Technology Detector</h2>
+                    <p style="color: #666; margin: 10px 0;">Detect frameworks, libraries, and server tech</p>
+                    <div class="option-group">
+                        <label>Target URL:</label>
+                        <input type="text" id="target-url" placeholder="https://example.com" value="https://example.com">
+                    </div>
+                    <div class="info-box">
+                        <h4>✅ This tool makes REAL requests</h4>
+                        <p>Detects: Server, WordPress, React, Vue, jQuery, Bootstrap, etc.</p>
+                    </div>
+                    <button class="run-btn" onclick="runTool()">▶ Detect Technologies</button>
+                `,
+                run: detectTech
+            },
+            ssl: {
+                title: '🔐 SSL/TLS Checker',
+                desc: 'Verifies HTTPS connectivity (REAL - Makes actual requests)',
+                html: `
+                    <h2>🔐 SSL/TLS Checker</h2>
+                    <p style="color: #666; margin: 10px 0;">Verify SSL/TLS configuration</p>
+                    <div class="option-group">
+                        <label>Target Domain:</label>
+                        <input type="text" id="target-url" placeholder="example.com" value="example.com">
+                    </div>
+                    <div class="info-box">
+                        <h4>✅ This tool makes REAL requests</h4>
+                        <p>Checks HTTPS connectivity and certificate validity</p>
+                    </div>
+                    <button class="run-btn" onclick="runTool()">▶ Check SSL</button>
+                `,
+                run: checkSSL
+            },
+            nmap: {
+                title: '🔍 Nmap Scanner',
+                desc: 'Port scanning simulation',
+                html: `
+                    <h2>🔍 Nmap - Network Scanner</h2>
+                    <p style="color: #666; margin: 10px 0;">Simulate port scanning (DEMO - No actual scanning)</p>
+                    <div class="option-group">
+                        <label>Target:</label>
+                        <input type="text" id="target-url" placeholder="example.com">
+                    </div>
+                    <div class="option-group">
+                        <label>Scan Type:</label>
+                        <select id="scan-type">
+                            <option value="-sV">Version Detection (-sV)</option>
+                            <option value="-sS">TCP SYN Scan (-sS)</option>
+                            <option value="-A">Aggressive Scan (-A)</option>
+                        </select>
+                    </div>
+                    <button class="run-btn" onclick="runTool()">▶ Run Scan</button>
+                `,
+                run: demoNmap
+            },
+            subfinder: {
+                title: '🌐 Subfinder',
+                desc: 'Subdomain enumeration simulation',
+                html: `
+                    <h2>🌐 Subfinder - Subdomain Discovery</h2>
+                    <p style="color: #666; margin: 10px 0;">Simulate subdomain enumeration (DEMO)</p>
+                    <div class="option-group">
+                        <label>Target Domain:</label>
+                        <input type="text" id="target-url" placeholder="example.com">
+                    </div>
+                    <button class="run-btn" onclick="runTool()">▶ Find Subdomains</button>
+                `,
+                run: demoSubfinder
+            },
+            sqlmap: {
+                title: '💉 SQLMap',
+                desc: 'SQL injection testing simulation',
+                html: `
+                    <h2>💉 SQLMap - SQL Injection Tester</h2>
+                    <p style="color: #666; margin: 10px 0;">Simulate SQL injection testing (DEMO)</p>
+                    <div class="option-group">
+                        <label>Target URL:</label>
+                        <input type="text" id="target-url" placeholder="http://example.com/page?id=1">
+                    </div>
+                    <div class="info-box">
+                        <h4>⚠️ Legal Warning</h4>
+                        <p>SQL injection testing without permission is illegal!</p>
+                    </div>
+                    <button class="run-btn" onclick="runTool()">▶ Test SQL Injection</button>
+                `,
+                run: demoSQLMap
+            },
+            xss: {
+                title: '🚨 XSS Scanner',
+                desc: 'XSS vulnerability detection simulation',
+                html: `
+                    <h2>🚨 XSS Scanner</h2>
+                    <p style="color: #666; margin: 10px 0;">Simulate XSS vulnerability scanning (DEMO)</p>
+                    <div class="option-group">
+                        <label>Target URL:</label>
+                        <input type="text" id="target-url" placeholder="http://example.com/search?q=test">
+                    </div>
+                    <button class="run-btn" onclick="runTool()">▶ Scan for XSS</button>
+                `,
+                run: demoXSS
+            },
+            dirb: {
+                title: '📁 Directory Brute Force',
+                desc: 'Hidden directory discovery simulation',
+                html: `
+                    <h2>📁 Directory Brute Force</h2>
+                    <p style="color: #666; margin: 10px 0;">Simulate directory enumeration (DEMO)</p>
+                    <div class="option-group">
+                        <label>Target URL:</label>
+                        <input type="text" id="target-url" placeholder="http://example.com">
+                    </div>
+                    <button class="run-btn" onclick="runTool()">▶ Find Directories</button>
+                `,
+                run: demoDirb
+            }
+        };
+
+        // Tool selection
+        document.querySelectorAll('.tool-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.tool-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+                currentTool = this.dataset.tool;
+                loadTool(currentTool);
+            });
+        });
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                document.getElementById('tab-' + this.dataset.tab).classList.add('active');
+            });
+        });
+
+        function loadTool(toolName) {
+            document.getElementById('tool-content').innerHTML = tools[toolName].html;
+        }
+
+        function runTool() {
+            const target = document.getElementById('target-url')?.value;
+            if (!target) {
+                addTerminal('ERROR: Please enter a target', 'error');
+                return;
+            }
+            tools[currentTool].run(target);
+        }
+
+        // REAL TOOLS
+        async function checkHeaders(url) {
+            addTerminal('$ Checking security headers for ' + url, 'prompt');
+            addTerminal('[*] Making request...', 'info');
+
+            try {
+                if (!url.startsWith('http')) url = 'https://' + url;
+                
+                const response = await fetch(url, { method: 'HEAD', mode: 'cors' });
+                const headers = {};
+                response.headers.forEach((value, key) => {
+                    headers[key] = value;
+                });
+
+                const checks = {
+                    'strict-transport-security': 'HSTS',
+                    'content-security-policy': 'CSP',
+                    'x-frame-options': 'X-Frame-Options',
+                    'x-content-type-options': 'X-Content-Type-Options',
+                    'x-xss-protection': 'X-XSS-Protection',
+                    'referrer-policy': 'Referrer-Policy'
+                };
+
+                const results = [];
+                for (const [header, name] of Object.entries(checks)) {
+                    if (headers[header]) {
+                        addTerminal('[✓] ' + name + ': ' + headers[header], 'output');
+                        results.push({ header: name, present: true, value: headers[header] });
+                    } else {
+                        addTerminal('[✗] ' + name + ': MISSING', 'error');
+                        results.push({ header: name, present: false });
+                    }
+                }
+
+                if (headers['server']) {
+                    addTerminal('[+] Server: ' + headers['server'], 'info');
+                }
+
+                addTerminal('[✓] Security headers check complete', 'output');
+                saveResult('Security Headers', url, results);
+            } catch (error) {
+                addTerminal('[!] Error: ' + error.message, 'error');
+                addTerminal('[!] Note: CORS may block some requests', 'info');
+            }
+        }
+
+        async function detectTech(url) {
+            addTerminal('$ Detecting technologies for ' + url, 'prompt');
+            addTerminal('[*] Fetching page...', 'info');
+
+            try {
+                if (!url.startsWith('http')) url = 'https://' + url;
+                
+                const response = await fetch(url);
+                const html = await response.text();
+                const headers = {};
+                response.headers.forEach((value, key) => {
+                    headers[key] = value;
+                });
+
+                const tech = [];
+
+                if (headers['server']) {
+                    addTerminal('[+] Server: ' + headers['server'], 'output');
+                    tech.push({ type: 'Server', name: headers['server'] });
+                }
+
+                const patterns = {
+                    'WordPress': /wp-content|wp-includes/i,
+                    'React': /react/i,
+                    'Vue.js': /vue\.js/i,
+                    'Angular': /angular/i,
+                    'jQuery': /jquery/i,
+                    'Bootstrap': /bootstrap/i
+                };
+
+                for (const [name, pattern] of Object.entries(patterns)) {
+                    if (pattern.test(html)) {
+                        addTerminal('[+] Detected: ' + name, 'output');
+                        tech.push({ name });
+                    }
+                }
+
+                addTerminal('[✓] Technology detection complete', 'output');
+                saveResult('Technology Detection', url, tech);
+            } catch (error) {
+                addTerminal('[!] Error: ' + error.message, 'error');
+            }
+        }
+
+        async function checkSSL(domain) {
+            addTerminal('$ Checking SSL/TLS for ' + domain, 'prompt');
+            addTerminal('[*] Testing HTTPS connection...', 'info');
+
+            try {
+                const url = 'https://' + domain.replace(/^https?:\/\//, '');
+                const response = await fetch(url);
+                
+                addTerminal('[✓] HTTPS connection successful', 'output');
+                addTerminal('[✓] Certificate appears valid', 'output');
+                
+                saveResult('SSL Check', domain, [{ check: 'HTTPS', status: 'Valid' }]);
+            } catch (error) {
+                addTerminal('[!] SSL Error: ' + error.message, 'error');
+            }
+        }
+
+        // DEMO TOOLS
+        function demoNmap(target) {
+            addTerminal('$ nmap -sV ' + target, 'prompt');
+            addTerminal('[*] Starting Nmap scan... (DEMO)', 'info');
+            setTimeout(() => {
+                addTerminal('[+] Host is up (0.045s latency)', 'output');
+                addTerminal('[+] PORT     STATE SERVICE    VERSION', 'output');
+                addTerminal('    80/tcp   open  http       Apache/2.4.41', 'output');
+                addTerminal('    443/tcp  open  ssl/https  Apache/2.4.41', 'output');
+                addTerminal('[✓] Scan complete', 'output');
+            }, 1000);
+        }
+
+        function demoSubfinder(target) {
+            addTerminal('$ subfinder -d ' + target, 'prompt');
+            addTerminal('[*] Finding subdomains... (DEMO)', 'info');
+            setTimeout(() => {
+                addTerminal('[+] www.' + target, 'output');
+                addTerminal('[+] mail.' + target, 'output');
+                addTerminal('[+] api.' + target, 'output');
+                addTerminal('[✓] Found 3 subdomains', 'output');
+            }, 1000);
+        }
+
+        function demoSQLMap(target) {
+            addTerminal('$ sqlmap -u "' + target + '"', 'prompt');
+            addTerminal('[*] Testing for SQL injection... (DEMO)', 'info');
+            setTimeout(() => {
+                addTerminal('[+] Parameter appears injectable', 'output');
+                addTerminal('[!] Detected: MySQL >= 5.0', 'output');
+                addTerminal('[✓] Scan complete', 'output');
+            }, 1500);
+        }
+
+        function demoXSS(target) {
+            addTerminal('$ xsstrike -u "' + target + '"', 'prompt');
+            addTerminal('[*] Testing for XSS... (DEMO)', 'info');
+            setTimeout(() => {
+                addTerminal('[!] Possible XSS vulnerability', 'output');
+                addTerminal('[✓] Scan complete', 'output');
+            }, 1200);
+        }
+
+        function demoDirb(target) {
+            addTerminal('$ dirb ' + target, 'prompt');
+            addTerminal('[*] Scanning directories... (DEMO)', 'info');
+            setTimeout(() => {
+                addTerminal('[+] Found: /admin/', 'output');
+                addTerminal('[+] Found: /login.php', 'output');
+                addTerminal('[✓] Scan complete', 'output');
+            }, 1300);
+        }
+
+        // Utilities
+        function addTerminal(text, type = 'output') {
+            const div = document.createElement('div');
+            div.className = 'terminal-line terminal-' + type;
+            div.textContent = text;
+            document.getElementById('terminal-output').appendChild(div);
+            document.querySelector('.terminal').scrollTop = 999999;
+        }
+
+        function clearTerminal() {
+            document.getElementById('terminal-output').innerHTML = 
+                '<div class="terminal-line terminal-info">Terminal cleared</div>' +
+                '<div class="terminal-line terminal-prompt">$</div>';
+        }
+
+        function saveResult(tool, target, data) {
+            testResults.push({
+                tool,
+                target,
+                timestamp: new Date().toISOString(),
+                data
+            });
+
+            const container = document.getElementById('results-container');
+            const div = document.createElement('div');
+            div.className = 'result-item';
+            div.innerHTML = `
+                <h3>${tool}</h3>
+                <p><strong>Target:</strong> ${target}</p>
+                <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            container.insertBefore(div, container.firstChild);
+        }
+
+        function exportResults(format) {
+            if (testResults.length === 0) {
+                alert('No results to export');
+                return;
+            }
+
+            let content = format === 'json' 
+                ? JSON.stringify(testResults, null, 2)
+                : testResults.map(r => 
+                    `=== ${r.tool} ===\nTarget: ${r.target}\nTime: ${r.timestamp}\n${JSON.stringify(r.data, null, 2)}\n\n`
+                  ).join('\n');
+
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `bug-bounty-results.${format}`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function saveNotes() {
+            const notes = document.getElementById('notes-area').value;
+            if (!notes) {
+                alert('Notes are empty');
+                return;
+            }
+            const blob = new Blob([notes], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'bug-bounty-notes.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize
+        loadTool('headers');
+    </script>
+</body>
+</html>

@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Kali-style Cyber Toolkit</title>
+    <style>
+      :root{
+        --kali-green:#98ff98;
+        --kali-accent:#4aa3ff;
+        --bg:#0b0f13;
+        --terminal-bg:#000;
+        --terminal-text:#ffffff;
+        --hover-bg:rgba(255,255,255,0.05);
+      }
+      @keyframes gradientBG {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      @keyframes pulseGlow {
+        0% { box-shadow: 0 0 5px rgba(74,163,255,0.2); }
+        50% { box-shadow: 0 0 15px rgba(74,163,255,0.4); }
+        100% { box-shadow: 0 0 5px rgba(74,163,255,0.2); }
+      }
+      @keyframes slideIn {
+        from { transform: translateX(-20px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes fadeInUp {
+        from { transform: translateY(10px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      html,body{
+        height:100%;
+        margin:0;
+        font-family:'JetBrains Mono',Consolas,"Courier New",monospace;
+        background:var(--bg);
+        color:var(--kali-green)
+      }
+      @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+      .app{
+        display:flex;
+        height:100vh;
+        gap:12px;
+        padding:12px;
+        max-width:1600px;
+        margin:0 auto;
+      }
+      @media (max-width: 768px) {
+        .app {
+          flex-direction:column;
+          height:auto;
+          min-height:100vh;
+        }
+        .sidebar {
+          width:100%;
+          max-height:300px;
+        }
+        .terminal-wrap {
+          margin-top:8px;
+        }
+        .controls {
+          flex-wrap:wrap;
+        }
+        .input-row {
+          flex-wrap:wrap;
+        }
+        .input-row .btn {
+          flex:1;
+          min-width:100px;
+        }
+      }
+      @media (max-width: 480px) {
+        .header {
+          flex-direction:column;
+          align-items:flex-start;
+          gap:4px;
+          height:auto;
+          padding:8px;
+        }
+        .terminal {
+          font-size:12px;
+        }
+        .btn {
+          padding:8px 12px;
+          font-size:13px;
+        }
+      }
+
+      /* Modal Styles */
+      .modal-overlay {
+        position:fixed;
+        top:0;
+        left:0;
+        right:0;
+        bottom:0;
+        background:rgba(0,0,0,0.95);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        z-index:1000;
+        backdrop-filter:blur(8px);
+      }
+      .modal-content.terminal-style {
+        background:#000;
+        border-radius:8px;
+        padding:0;
+        max-width:700px;
+        width:95%;
+        border:1px solid #ff000080;
+        box-shadow:0 0 20px rgba(255,0,0,0.3),
+                  inset 0 0 20px rgba(255,0,0,0.2);
+      }
+      .warning-header {
+        background:linear-gradient(90deg, #ff000020, #ff000040, #ff000020);
+        color:#ff0000;
+        text-align:center;
+        padding:15px;
+        font-size:20px;
+        font-weight:bold;
+        text-shadow:0 0 10px rgba(255,0,0,0.5);
+        border-bottom:1px solid #ff000040;
+      }
+      .terminal-window {
+        padding:0;
+      }
+      .terminal-bar {
+        background:#1a1a1a;
+        padding:8px 15px;
+        display:flex;
+        align-items:center;
+        border-bottom:1px solid #333;
+      }
+      .terminal-buttons {
+        display:flex;
+        gap:6px;
+      }
+      .terminal-buttons span {
+        width:12px;
+        height:12px;
+        border-radius:50%;
+        background:#ff5f56;
+      }
+      .terminal-buttons span:nth-child(2) {
+        background:#ffbd2e;
+      }
+      .terminal-buttons span:nth-child(3) {
+        background:#27c93f;
+      }
+      .terminal-title {
+        color:#666;
+        font-size:12px;
+        margin-left:20px;
+      }
+      .terminal-content {
+        padding:20px;
+        color:#fff;
+      }
+      .type-text {
+        color:#00ff00;
+        margin-bottom:20px;
+        font-family:monospace;
+      }
+      @keyframes typeWriter {
+        from { width:0; }
+        to { width:100%; }
+      }
+      .blink {
+        animation:blink 1s step-end infinite;
+      }
+      @keyframes blink {
+        50% { opacity:0; }
+      }
+      .username-input {
+        margin: 20px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        animation: fadeInUp 0.5s ease forwards;
+      }
+      .terminal-input {
+        background: var(--terminal-bg);
+        border: 1px solid var(--kali-green);
+        color: var(--kali-green);
+        padding: 8px 12px;
+        font-family: inherit;
+        font-size: 14px;
+        width: 200px;
+        outline: none;
+      }
+      .terminal-input:focus {
+        border-color: var(--kali-accent);
+        box-shadow: 0 0 5px rgba(74,163,255,0.3);
+      }
+      .terminal-input::placeholder {
+        color: rgba(152,255,152,0.5);
+      }
+      .rules-container {
+        margin:20px 0;
+      }
+      .rule {
+        margin:15px 0;
+        opacity:0;
+        transform:translateX(-20px);
+        transition:all 0.5s ease;
+      }
+      .rule.show {
+        opacity:1;
+        transform:translateX(0);
+      }
+      .rule-number {
+        color:#ff0000;
+        font-weight:bold;
+        margin-right:10px;
+      }
+      .rule-text {
+        color:#fff;
+      }
+      .agreement-check {
+        margin:24px 0;
+        display:flex;
+        align-items:center;
+        gap:12px;
+        padding:10px;
+        background:#ff00001a;
+        border:1px solid #ff000040;
+        border-radius:4px;
+      }
+      .agreement-check input[type="checkbox"] {
+        width:20px;
+        height:20px;
+        accent-color:#ff0000;
+      }
+      .agreement-check label {
+        color:#ff0000;
+        font-size:14px;
+        font-family:monospace;
+      }
+      .terminal-btn {
+        width:100%;
+        margin-top:20px;
+        background:#1a1a1a;
+        color:#ff0000;
+        border:1px solid #ff000040;
+        font-family:monospace;
+        font-size:16px;
+        padding:15px;
+        opacity:0.5;
+        transition:all 0.3s ease;
+      }
+      .terminal-btn:not([disabled]) {
+        opacity:1;
+        cursor:pointer;
+        background:#ff00001a;
+      }
+      .terminal-btn:not([disabled]):hover {
+        background:#ff00002a;
+        box-shadow:0 0 15px rgba(255,0,0,0.3);
+        transform:translateY(-2px);
+      }
+      @keyframes scanline {
+        0% { transform:translateY(-100%); }
+        100% { transform:translateY(100%); }
+      }
+      .terminal-content::before {
+        content:"";
+        position:absolute;
+        top:0;
+        left:0;
+        right:0;
+        bottom:0;
+        background:linear-gradient(0deg, transparent 0%, rgba(255,0,0,0.1) 50%, transparent 100%);
+        animation:scanline 8s linear infinite;
+        pointer-events:none;
+      }
+      .sidebar {
+        width:320px;
+        background:#071018;
+        border:1px solid rgba(255,255,255,0.03);
+        border-radius:6px;
+        padding:12px;
+        overflow:auto;
+        animation:slideIn 0.5s ease-out;
+      }
+      .sidebar h2{color:var(--kali-accent);font-weight:700;margin:6px 0 12px}
+      .tool-item {
+        padding:12px;
+        border-radius:6px;
+        margin:8px 0;
+        cursor:pointer;
+        background:rgba(255,255,255,0.02);
+        border:1px solid rgba(255,255,255,0.05);
+        transition:all 0.2s ease;
+        position:relative;
+        overflow:hidden;
+      }
+      .tool-item::before {
+        content:'';
+        position:absolute;
+        top:0;
+        left:0;
+        width:100%;
+        height:100%;
+        background:linear-gradient(135deg, rgba(74,163,255,0.1), rgba(152,255,152,0.1));
+        opacity:0;
+        transition:opacity 0.2s ease;
+      }
+      .tool-item:hover {
+        transform:translateY(-2px);
+        border-color:rgba(74,163,255,0.3);
+      }
+      .tool-item:hover::before {
+        opacity:1;
+      }
+      .tool-item .name {
+        color:var(--kali-green);
+        font-weight:700;
+        font-size:14px;
+        position:relative;
+      }
+      .tool-item .desc {
+        color:rgba(152,255,152,0.75);
+        font-size:12px;
+        margin-top:6px;
+        line-height:1.4;
+        position:relative;
+      }
+      .main{flex:1;display:flex;flex-direction:column}
+      .header{height:48px;display:flex;align-items:center;padding:0 12px;border-radius:6px;color:var(--kali-accent)}
+      #terminal-prompt {
+        color: var(--kali-green);
+        font-weight: bold;
+      }
+      .terminal-wrap{
+        flex:1;
+        margin-top:12px;
+        background:var(--terminal-bg);
+        border-radius:8px;
+        padding:16px;
+        display:flex;
+        flex-direction:column;
+        box-shadow:0 8px 24px rgba(0,0,0,0.8);
+        position:relative;
+        animation:fadeInUp 0.5s ease-out;
+      }
+      .terminal-wrap::before {
+        content:'';
+        position:absolute;
+        top:-1px;
+        left:-1px;
+        right:-1px;
+        bottom:-1px;
+        border-radius:8px;
+        background:linear-gradient(135deg, rgba(74,163,255,0.5), rgba(152,255,152,0.5));
+        background-size:200% 200%;
+        animation:gradientBG 15s ease infinite;
+        opacity:0.1;
+        pointer-events:none;
+      }
+      .terminal{
+        flex:1;
+        overflow:auto;
+        padding:16px;
+        background:linear-gradient(180deg,#000,#020202);
+        border-radius:6px;
+        border:1px solid rgba(255,255,255,0.05);
+        line-height:1.5;
+        font-size:14px;
+        scroll-behavior:smooth;
+      }
+      .terminal::-webkit-scrollbar {
+        width:8px;
+        height:8px;
+      }
+      .terminal::-webkit-scrollbar-track {
+        background:transparent;
+      }
+      .terminal::-webkit-scrollbar-thumb {
+        background:rgba(255,255,255,0.1);
+        border-radius:4px;
+      }
+      .terminal::-webkit-scrollbar-thumb:hover {
+        background:rgba(255,255,255,0.2);
+      }
+      .prompt{
+        color:var(--kali-accent);
+        margin-right:8px;
+        user-select:none;
+      }
+      .cmdline{
+        color:var(--terminal-text);
+        word-break:break-all;
+      }
+      .cmdline.success {
+        color:var(--kali-green);
+      }
+      .cmdline.error {
+        color:#ff6b6b;
+      }
+      .controls{
+        display:flex;
+        gap:12px;
+        margin-top:16px;
+        padding:8px;
+        background:rgba(255,255,255,0.02);
+        border-radius:6px;
+      }
+      .btn{
+        background:var(--kali-accent);
+        color:#001;
+        padding:10px 16px;
+        border-radius:6px;
+        cursor:pointer;
+        border:none;
+        font-weight:700;
+        transition:all 0.2s;
+        font-size:14px;
+      }
+      .btn:hover {
+        transform:translateY(-1px);
+        box-shadow:0 4px 12px rgba(74,163,255,0.3);
+      }
+      .btn:active {
+        transform:translateY(0);
+      }
+      .btn.secondary{
+        background:transparent;
+        color:var(--kali-green);
+        border:1px solid rgba(255,255,255,0.05);
+      }
+      .btn.secondary:hover {
+        background:rgba(152,255,152,0.1);
+        box-shadow:none;
+      }
+      .status-installed{color:#4ee04e}
+      .status-missing{color:#ff6b6b}
+      .input-row{display:flex;gap:8px;margin-top:10px}
+      @keyframes fadeIn {
+        from { opacity:0; transform:translateY(10px); }
+        to { opacity:1; transform:translateY(0); }
+      }
+      .fade-in {
+        animation: fadeIn 0.3s ease-out;
+      }
+      input[type=text],select {
+        background:#071018;
+        color:var(--kali-green);
+        border:1px solid rgba(255,255,255,0.05);
+        padding:10px 12px;
+        border-radius:6px;
+        flex:1;
+        font-size:14px;
+        transition:all 0.2s;
+      }
+      input[type=text]:hover,
+      input[type=text]:focus,
+      select:hover,
+      select:focus {
+        border-color:var(--kali-accent);
+        box-shadow:0 0 0 4px rgba(74,163,255,0.1);
+        outline:none;
+      }
+      select {
+        appearance:none;
+        cursor:pointer;
+        padding-right:32px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2398ff98' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+        background-repeat:no-repeat;
+        background-position:right 12px center;
+      }
+      .file-upload {
+        position:relative;
+        overflow:hidden;
+        margin-right:8px;
+      }
+      .file-upload input[type="file"] {
+        position:absolute;
+        top:0;
+        right:0;
+        min-width:100%;
+        min-height:100%;
+        opacity:0;
+        cursor:pointer;
+      }
+      .file-name {
+        color:var(--kali-green);
+        margin-left:8px;
+        font-size:14px;
+        opacity:0.8;
+      }
+      .kali-title{font-size:14px;color:var(--kali-green);font-weight:800}
+      .small{font-size:12px;color:rgba(152,255,152,0.8)}
+      .footer{font-size:12px;color:rgba(152,255,152,0.5);padding:8px 12px}
+      /* scrollbar */
+      .terminal::-webkit-scrollbar{height:10px;width:10px}
+      .terminal::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.06);border-radius:6px}
+    </style>
+  </head>
+  <body>
+    <!-- Agreement Modal -->
+    <div id="agreement-modal" class="modal-overlay">
+      <div class="modal-content fade-in terminal-style">
+        <div class="warning-header">
+          <span class="blink">⚠️ WARNING: RESTRICTED ACCESS ⚠️</span>
+        </div>
+        <div class="modal-body">
+          <div class="terminal-window">
+            <div class="terminal-bar">
+              <div class="terminal-buttons">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <div class="terminal-title">Security Protocol Verification</div>
+            </div>
+            <div class="terminal-content">
+              <div class="type-text" id="initText">root@security:~$ Initializing security protocol...</div>
+              <div class="username-input">
+                <label for="username">[IDENTIFY]</label>
+                <input type="text" id="username" placeholder="Enter your username" class="terminal-input">
+              </div>
+              <div class="rules-container">
+                <div class="rule" id="rule1">
+                  <span class="rule-number">[Rule 01]</span>
+                  <span class="rule-text">I will only test systems I own or have explicit permission to test.</span>
+                </div>
+                <div class="rule" id="rule2">
+                  <span class="rule-number">[Rule 02]</span>
+                  <span class="rule-text">I acknowledge unauthorized scanning/testing is strictly illegal.</span>
+                </div>
+                <div class="rule" id="rule3">
+                  <span class="rule-number">[Rule 03]</span>
+                  <span class="rule-text">I will not use these tools for malicious purposes or attacks.</span>
+                </div>
+                <div class="rule" id="rule4">
+                  <span class="rule-number">[Rule 04]</span>
+                  <span class="rule-text">I accept full responsibility for my actions using these tools.</span>
+                </div>
+                <div class="rule" id="rule5">
+                  <span class="rule-number">[Rule 05]</span>
+                  <span class="rule-text">These tools are for security research and testing only.</span>
+                </div>
+              </div>
+              <div class="agreement-check">
+                <input type="checkbox" id="agree-checkbox">
+                <label for="agree-checkbox">[CONFIRM] I understand and accept all security protocols</label>
+              </div>
+              <button id="agree-btn" class="btn terminal-btn" disabled>[ INITIALIZE TOOLKIT ]</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="app" style="display:none">
+      <div class="sidebar">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div class="kali-title">Kali Toolkit</div>
+          <div class="small">— Local dashboard</div>
+        </div>
+        <h2>Tools</h2>
+        <div id="tools-list">Loading tools...</div>
+        <div style="margin-top:12px" class="small">Click a tool to fill the command input. Green = installed, red = missing.</div>
+      </div>
+
+      <script>
+        // Handle agreement modal
+        document.addEventListener('DOMContentLoaded', () => {
+          const modal = document.getElementById('agreement-modal');
+          const app = document.querySelector('.app');
+          const checkbox = document.getElementById('agree-checkbox');
+          const agreeBtn = document.getElementById('agree-btn');
+          const usernameInput = document.getElementById('username');
+          const initText = document.getElementById('initText');
+          const rules = document.querySelectorAll('.rule');
+          
+          let username = '';
+          
+          // Check if user has already agreed and has username
+          const savedUsername = localStorage.getItem('cybertoolkit-username');
+          if (localStorage.getItem('toolkit-agreement-accepted') && savedUsername) {
+            modal.style.display = 'none';
+            app.style.display = 'flex';
+            updateTerminalPrompt(savedUsername);
+            return;
+          }
+          
+          // Handle username input
+          usernameInput.addEventListener('input', function() {
+            username = this.value.trim();
+            validateForm();
+          });
+
+          // Handle agreement checkbox
+          checkbox.addEventListener('change', function() {
+            validateForm();
+          });
+
+          function validateForm() {
+            const usernameValid = username.length >= 3 && username.length <= 20 && /^[a-zA-Z0-9_-]+$/.test(username);
+            agreeBtn.disabled = !checkbox.checked || !usernameValid;
+            
+            if (!usernameValid && username) {
+              usernameInput.style.borderColor = '#ff0000';
+              usernameInput.title = 'Username must be 3-20 characters and contain only letters, numbers, underscores, and hyphens';
+            } else {
+              usernameInput.style.borderColor = '';
+              usernameInput.title = '';
+            }
+          }
+          
+          // Handle agreement button
+          agreeBtn.addEventListener('click', () => {
+            if (!username) {
+              alert('Please enter a username');
+              return;
+            }
+            if (username.length < 3 || username.length > 20 || !/^[a-zA-Z0-9_-]+$/.test(username)) {
+              alert('Username must be 3-20 characters and contain only letters, numbers, underscores, and hyphens');
+              return;
+            }
+            
+            localStorage.setItem('toolkit-agreement-accepted', 'true');
+            localStorage.setItem('cybertoolkit-username', username);
+            modal.style.display = 'none';
+            app.style.display = 'flex';
+            updateTerminalPrompt(username);
+          });
+
+          // Animated typing effect for init text
+          function typeWriter(element, text, speed = 50) {
+            let i = 0;
+            element.innerHTML = '';
+            function type() {
+              if (i < text.length) {
+                element.innerHTML += text.charAt(i);
+                i++;
+                setTimeout(type, speed);
+              } else {
+                // Start showing rules after typing
+                showRulesSequentially();
+              }
+            }
+            type();
+          }
+
+          // Show rules one by one
+          function showRulesSequentially() {
+            rules.forEach((rule, index) => {
+              setTimeout(() => {
+                rule.classList.add('show');
+                // Add typing sound effect
+                const audio = new Audio('data:audio/wav;base64,UklGRlwEAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YTgEAACBhYqFbF1fdH2Hf4F0aWp+gHNfa3R5cG90gYiCdG9yeH55eHNwdHlwb3J6fXt2eX2JhoCHkZKTkpOVlJKTlpaUkpCSkZSYmZaRkZabn6OgmpyfpqmnoaCmrLCvrauxtLW1tLa1tLe6vLu7u7y9vr2+vr2+vr2+v8HBwMLCwcLDxMXFxMTFx8vKyMfHyMrLysnJycnKy8zMy8vMzc7Pz87O0NHU1NPT1NXW19jY2Nna29zd3d7f4OHi4+Tl5ufo6enq6+zt7u/w8PHy8/T19vf4+fr7/P3+/wAAAQECAwQEBQYHBwgJCQoLDAwNDQ4PDxAQERESExMUFBUVFhcXGBgZGRobGxwcHR0eHx8gICEhIiMjJCQlJSYnJygoKSkqKyssLC0tLi4vLzAwMTEyMjM0NDU1Njc3ODg5Ojs7PDw9PT4+Pz9AQEFBQkJDQ0RFRUZGRkdISElJSkpLS0xMTU1OTk9PUFFRU1NUVFVVVlZXV1hYWVlaWltbXFxdXV5eX19gYGFhYmJjY2RkZWVmZmdnaGhpaWpqa2tsbG1tbm5vb3BwcXFycnNzdHR1dXZ2d3d4eHl5enp7e3x8fX1+fn9/gICBgYKCg4ODhISFhYaGh4eIiImJioqLi4yMjY2Ojo+PkJCRkZKSk5OUlJWVlpaXl5iYmZmampubnJydnZ6en5+goKGhoqKjo6SkpaWmpqenqKipqaqqq6usrK2trq6vr7CwsbGysrOztLS1tba2t7e4uLm5urq7u7y8vb2+vr+/wMDBwcLCw8PExMXFxsbHx8jIycnKysvLzMzNzc7Oz8/Q0NHR0tLT09TU1dXW1tfX2NjZ2dra29vc3N3d3t7f3+Dg4eHi4uPj5OTl5ebm5+fo6Onp6urr6+zs7e3u7u/v8PDx8fLy8/P09PX19vb39/j4+fn6+vv7/Pz9/f7+//8AAQECAgMDBAQFBQYGBwcICAkJCgoLCwwMDQ0ODg8PEBARERISExMUFBUVFhYXFxgYGRkaGhsbHBwdHR4eHx8gICEhIiIjIyQkJSUmJicnKCgpKSoqKyssLC0tLi4vLzAwMTEyMjMzNDQ1NTY2Nzc4ODk5Ojo7Ozw8PT0+Pj8/QEBBQUJCQkNDRERFRUZGR0dISElJSkpLS0xMTU1OTk9PUFBRUVJSUlNTVFRVVVZWV1dYWFlZWlpbW1xcXV1eXl9fYGBhYWJiY2NkZGVlZmZnZ2hoaWlqamtrbGxtbW5ub29wcHFxcnJzc3R0dXV2dnd3eHh5eXp6e3t8fH19fn5/f4CAgYGCgoODhISFhYaGh4eIiImJioqLi4yMjY2Ojo+PkJCRkZKSk5OUlJWVlpaXl5iYmZmampubnJydnZ6en5+goKGhoqKjo6SkpaWmp');
+                audio.play();
+              }, index * 800);  // Show each rule after 800ms
+            });
+          }
+
+          // Start the animation sequence
+          setTimeout(() => {
+            typeWriter(initText, 'root@security:~$ Initializing security protocol...');
+          }, 500);
+
+          checkbox.addEventListener('change', () => {
+            agreeBtn.disabled = !checkbox.checked;
+          });
+
+          agreeBtn.addEventListener('click', () => {
+            if (checkbox.checked) {
+              localStorage.setItem('toolkit-agreement-accepted', 'true');
+              modal.style.opacity = '0';
+              modal.style.transition = 'opacity 0.3s ease';
+              app.style.display = 'flex';
+              setTimeout(() => {
+                modal.style.display = 'none';
+              }, 300);
+            }
+          });
+        });
+
+        // Add smooth transitions when adding output to terminal
+        function addTerminalOutput(text, isSuccess = true) {
+          const terminal = document.getElementById('terminal');
+          const line = document.createElement('div');
+          line.className = `cmdline ${isSuccess ? 'success' : 'error'} fade-in`;
+          line.textContent = text;
+          terminal.appendChild(line);
+          terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // Add hover effects for tool items
+        document.addEventListener('DOMContentLoaded', () => {
+          document.querySelectorAll('.tool-item').forEach(tool => {
+            tool.addEventListener('mouseenter', () => {
+              tool.style.transform = 'translateY(-2px)';
+              tool.style.boxShadow = '0 4px 12px rgba(74,163,255,0.2)';
+            });
+            tool.addEventListener('mouseleave', () => {
+              tool.style.transform = 'none';
+              tool.style.boxShadow = 'none';
+            });
+          });
+
+          // Add smooth transitions for inputs
+          const inputs = document.querySelectorAll('input[type="text"], select');
+          inputs.forEach(input => {
+            input.addEventListener('focus', () => {
+              input.style.animation = 'pulseGlow 2s infinite';
+            });
+            input.addEventListener('blur', () => {
+              input.style.animation = 'none';
+            });
+          });
+        });
+      </script>
+
+      <div class="main">
+        <div class="header">
+          <div style="flex:1"><span id="terminal-prompt">cyber-toolkit@user</span>:~# <span class="small" id="session-info">local</span></div>
+          <div class="small">Kali-style Terminal Emulator</div>
+        </div>
+
+        <div class="terminal-wrap">
+          <div id="terminal" class="terminal" aria-live="polite"></div>
+
+          <div class="input-row">
+            <input type="text" id="command-input" placeholder="Type a command or pick a tool and press Run" autocomplete="off" spellcheck="false">
+            <button class="btn" id="run-btn">Run</button>
+            <button class="btn secondary" id="clear-btn">Clear</button>
+          </div>
+
+          <div class="controls">
+            <select id="preset-args"><option value="">-- Preset args --</option></select>
+            <div style="flex:1"></div>
+            <div id="tool-status" class="small">status: checking...</div>
+          </div>
+        </div>
+
+        <div class="footer">Note: Tools must be installed on the host machine; missing tools will show install hints.</div>
+      </div>
+    </div>
+
+    <script>
+      const terminal = document.getElementById('terminal');
+      const cmdInput = document.getElementById('command-input');
+      const runBtn = document.getElementById('run-btn');
+      const clearBtn = document.getElementById('clear-btn');
+      const toolsListEl = document.getElementById('tools-list');
+      const toolStatusEl = document.getElementById('tool-status');
+      const terminalPromptEl = document.getElementById('terminal-prompt');
+      
+      // Initialize username from storage or set default
+      function initializeUsername() {
+        const savedUsername = localStorage.getItem('cybertoolkit-username');
+        if (savedUsername) {
+          updateTerminalPrompt(savedUsername);
+        }
+      }
+
+      // Update terminal prompt with username
+      function updateTerminalPrompt(username) {
+        const promptText = `cyber-toolkit@${username}`;
+        terminalPromptEl.textContent = promptText;
+        // Also update the terminal's command line style
+        terminal.querySelectorAll('.command-line').forEach(line => {
+          line.querySelector('.prompt').textContent = promptText + ':~$';
+        });
+      }
+
+      // Run initialization
+      initializeUsername();
+
+      function writeLine(text, cls=''){
+        const el = document.createElement('div');
+        if(cls) el.className = cls;
+        el.textContent = text;
+        terminal.appendChild(el);
+        terminal.scrollTop = terminal.scrollHeight;
+      }
+
+      function prompt(){
+        writeLine('\nroot@kali:~# ' + cmdInput.value, 'cmdline');
+      }
+
+      // Fetch tools from backend and render
+      async function loadTools(){
+        try{
+          const res = await fetch('/api/tools');
+          if(!res.ok) throw new Error('Failed to fetch tools');
+          const data = await res.json();
+          renderTools(data);
+          toolStatusEl.textContent = 'status: tools loaded';
+        }catch(e){
+          toolsListEl.innerHTML = '<div style="color:#ff6b6b">Failed to load tools. Start backend.</div>';
+          toolStatusEl.textContent = 'status: backend unreachable';
+        }
+      }
+
+      function renderTools(obj){
+        toolsListEl.innerHTML = '';
+        const categories = Object.keys(obj);
+        categories.forEach(catKey => {
+          const cat = obj[catKey];
+          const h = document.createElement('div');
+          h.className = 'small';
+          h.style.margin = '10px 0 6px';
+          h.style.color = 'var(--kali-accent)';
+          h.textContent = cat.name || catKey;
+          toolsListEl.appendChild(h);
+
+          cat.tools.forEach(tool => {
+            const t = document.createElement('div');
+            t.className = 'tool-item';
+            t.innerHTML = `<div class="name">${tool.name} <span class="small">${tool.version?(' v'+tool.version):''}</span></div><div class="desc">${tool.description || ''}</div>`;
+            if(tool.installed){
+              const s = document.createElement('div'); s.className='small status-installed'; s.textContent='Installed'; t.appendChild(s);
+            } else {
+              const s = document.createElement('div'); s.className='small status-missing'; s.textContent='Not installed'; t.appendChild(s);
+            }
+            t.addEventListener('click', ()=>{
+              cmdInput.value = tool.command_example || tool.name;
+              document.getElementById('session-info').textContent = tool.name;
+            });
+            toolsListEl.appendChild(t);
+          });
+        });
+      }
+
+      // Run command by posting to backend /api/exec and streaming output
+      async function runCommand(raw){
+        if(!raw) return;
+        writeLine('\nroot@kali:~# ' + raw, 'prompt');
+
+        // Build payload: try to split command into tool + args
+        const parts = raw.trim().split(/\s+/);
+        const tool = parts[0];
+        const args = parts.slice(1);
+
+        const payload = {tool, args};
+
+        try{
+          const resp = await fetch('/api/exec', {
+            method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+          });
+
+          if(!resp.ok){
+            const err = await resp.json().catch(()=>({error:'unknown'}));
+            writeLine('ERROR: ' + (err.error||'Execution failed'), 'small');
+            return;
+          }
+
+          // stream body
+          const reader = resp.body.getReader();
+          const decoder = new TextDecoder();
+          while(true){
+            const {value, done} = await reader.read();
+            if(done) break;
+            const text = decoder.decode(value);
+            // naive splitting by newline
+            text.split('\n').forEach(line=>{
+              if(line) writeLine(line);
+            });
+          }
+
+          writeLine('--- command finished ---', 'small');
+        }catch(e){
+          writeLine('ERROR: ' + e.message, 'small');
+        }
+      }
+
+      runBtn.addEventListener('click', ()=>{
+        const cmd = cmdInput.value.trim();
+        if(!cmd) return;
+        runCommand(cmd);
+      });
+
+      clearBtn.addEventListener('click', ()=>{ terminal.innerHTML=''; });
+
+      // support pressing Enter in input
+      cmdInput.addEventListener('keydown', (ev)=>{
+        if(ev.key==='Enter'){ ev.preventDefault(); runBtn.click(); }
+      });
+
+      // initial
+      writeLine('Welcome to Kali-style Cyber Toolkit');
+      writeLine('Type a command or pick a tool from the left and press Run.');
+      loadTools();
+    </script>
+  </body>
+</html>
