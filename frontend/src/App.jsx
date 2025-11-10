@@ -3,11 +3,22 @@ import axios from "axios";
 
 const API_BASE = "/api"; // Using relative path since frontend and backend are on same domain
 
-// Tool-specific option definitions
+// Tool-specific option definitions with detailed help
 const TOOL_OPTIONS = {
   nmap: {
     name: "Nmap",
     description: "Network mapper - scan ports and services",
+    fullGuide: {
+      what: "Nmap is a powerful network scanning tool that discovers hosts, ports, and services on a network.",
+      when: "Use for network reconnaissance, port scanning, service enumeration, vulnerability detection.",
+      examples: [
+        "nmap -sV example.com (detect service versions)",
+        "nmap -sC -sV example.com (safe scripts + version detection)",
+        "nmap -A example.com (aggressive: OS + service + script scanning)",
+        "nmap -p- example.com (scan all 65535 ports)"
+      ],
+      risks: "⚠️ Aggressive scanning may trigger intrusion detection systems. Always get permission before scanning."
+    },
     options: [
       { flag: "-sV", label: "Service Version Detection", checked: true },
       { flag: "-sC", label: "Script Scanning", checked: false },
@@ -24,6 +35,16 @@ const TOOL_OPTIONS = {
   masscan: {
     name: "Masscan",
     description: "Fast network scanner",
+    fullGuide: {
+      what: "Masscan is an extremely fast port scanner that can scan the entire internet in under 6 minutes.",
+      when: "Use for fast, large-scale port scanning with high packet rates.",
+      examples: [
+        "masscan 192.168.1.0/24 -p 1-1000",
+        "masscan example.com -p- --rate 10000",
+        "masscan 10.0.0.0/8 -p 80,443 --rate 100000"
+      ],
+      risks: "⚠️ Very aggressive scanning. Can overwhelm network infrastructure. Requires root/admin."
+    },
     options: [
       { flag: "-p 1-1000", label: "Ports 1-1000", checked: true },
       { flag: "-p-", label: "All Ports", checked: false },
@@ -36,6 +57,16 @@ const TOOL_OPTIONS = {
   whois: {
     name: "Whois",
     description: "Domain/IP registrant information",
+    fullGuide: {
+      what: "Whois queries the registrar databases to find domain and IP ownership information.",
+      when: "Use for OSINT (Open Source Intelligence) gathering, domain reconnaissance.",
+      examples: [
+        "whois example.com",
+        "whois 1.1.1.1",
+        "whois -h whois.arin.net 192.0.2.0"
+      ],
+      risks: "Safe - Public database queries. No enumeration risk."
+    },
     options: [
       { flag: "", label: "Standard Lookup", checked: true },
     ],
@@ -44,6 +75,17 @@ const TOOL_OPTIONS = {
   dig: {
     name: "Dig",
     description: "DNS lookup tool",
+    fullGuide: {
+      what: "Dig (Domain Information Groper) performs DNS lookups and shows detailed query information.",
+      when: "Use for DNS reconnaissance, zone transfer attempts, subdomain enumeration.",
+      examples: [
+        "dig example.com +short",
+        "dig example.com ANY",
+        "dig @8.8.8.8 example.com",
+        "dig example.com +trace (trace DNS path)"
+      ],
+      risks: "Relatively safe - DNS queries are usually logged but not blocked."
+    },
     options: [
       { flag: "", label: "A Record", checked: true },
       { flag: "+short", label: "Short Output", checked: true },
@@ -56,6 +98,17 @@ const TOOL_OPTIONS = {
   curl: {
     name: "Curl",
     description: "HTTP request tool",
+    fullGuide: {
+      what: "Curl is a command-line HTTP client for making web requests, testing APIs, and website crawling.",
+      when: "Use for HTTP testing, API calls, web server enumeration, SSL/TLS testing.",
+      examples: [
+        "curl -I http://example.com (headers only)",
+        "curl -v http://example.com (verbose)",
+        "curl -X POST -d 'data' http://example.com",
+        "curl -k https://example.com (ignore SSL)"
+      ],
+      risks: "Depends on target - GET requests are generally safe, but POST/PUT can cause state changes."
+    },
     options: [
       { flag: "-I", label: "Headers Only (-I)", checked: false },
       { flag: "-L", label: "Follow Redirects (-L)", checked: true },
@@ -69,6 +122,16 @@ const TOOL_OPTIONS = {
   traceroute: {
     name: "Traceroute",
     description: "Trace route to host",
+    fullGuide: {
+      what: "Traceroute maps the network path taken by packets to reach a destination host.",
+      when: "Use for network path analysis, identifying latency issues, finding intermediate routers.",
+      examples: [
+        "traceroute example.com",
+        "traceroute -m 30 example.com",
+        "traceroute -I example.com (ICMP mode)"
+      ],
+      risks: "Safe - Network diagnostic tool. May be rate-limited or blocked by firewalls."
+    },
     options: [
       { flag: "", label: "Standard Traceroute", checked: true },
       { flag: "-m 30", label: "Max Hops: 30", checked: true },
@@ -78,6 +141,16 @@ const TOOL_OPTIONS = {
   host: {
     name: "Host",
     description: "DNS lookup utility",
+    fullGuide: {
+      what: "Host is a simple DNS lookup utility that resolves domain names to IP addresses.",
+      when: "Use for quick DNS lookups and reverse IP lookups.",
+      examples: [
+        "host example.com",
+        "host 1.1.1.1",
+        "host -v example.com (verbose)"
+      ],
+      risks: "Safe - Simple DNS queries."
+    },
     options: [
       { flag: "", label: "Standard Lookup", checked: true },
       { flag: "-v", label: "Verbose", checked: false },
@@ -87,6 +160,16 @@ const TOOL_OPTIONS = {
   ping: {
     name: "Ping",
     description: "Test host reachability",
+    fullGuide: {
+      what: "Ping tests host availability and measures round-trip latency using ICMP echo requests.",
+      when: "Use for checking if a host is alive and measuring network latency.",
+      examples: [
+        "ping -c 4 example.com",
+        "ping -i 0.2 example.com (fast interval)",
+        "ping -W 2 example.com (2 second timeout)"
+      ],
+      risks: "Safe - Basic network diagnostic tool. Some hosts block ICMP."
+    },
     options: [
       { flag: "-c 4", label: "Count: 4 packets", checked: true },
       { flag: "-i 0.2", label: "Interval: 0.2s", checked: false },
@@ -169,9 +252,17 @@ export default function App() {
   const [running, setRunning] = useState(false);
   const [jobs, setJobs] = useState([]);
   const [showOptions, setShowOptions] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(localStorage.getItem("cyber-kit-visited") ? false : true);
+  const [showHelp, setShowHelp] = useState(false);
   const terminalRef = useRef(null);
 
   useEffect(()=>{ refreshJobs(); }, []);
+
+  // Mark onboarding as seen
+  const completeOnboarding = () => {
+    localStorage.setItem("cyber-kit-visited", "true");
+    setShowOnboarding(false);
+  };
 
   function applyPreset(t) {
     const p = PRESETS[t];
@@ -188,6 +279,191 @@ export default function App() {
       console.error(e);
     }
   }
+
+  // Onboarding Modal Component
+  const OnboardingModal = () => {
+    return (
+      <div style={{
+        position: "fixed",
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: "rgba(0,0,0,0.85)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000
+      }}>
+        <div style={{
+          backgroundColor: "#0d1117",
+          border: "1px solid #30363d",
+          borderRadius: "8px",
+          padding: "32px",
+          maxWidth: "600px",
+          maxHeight: "80vh",
+          overflow: "auto",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.9)"
+        }}>
+          <h1 style={{marginTop: 0, color: "#58a6ff"}}>🎯 Welcome to Cyber Tool Kit!</h1>
+          
+          <h3>What is this?</h3>
+          <p>This is an advanced cybersecurity reconnaissance and testing tool that provides a user-friendly interface for network scanning, DNS enumeration, HTTP testing, and more.</p>
+
+          <h3>📋 Available Tools (8 Tools)</h3>
+          <ul style={{fontSize: "14px", lineHeight: "1.8"}}>
+            <li><strong>Nmap</strong> - Network scanning, port discovery, service enumeration</li>
+            <li><strong>Masscan</strong> - Fast large-scale port scanning</li>
+            <li><strong>Whois</strong> - Domain and IP registrant information</li>
+            <li><strong>Dig</strong> - DNS lookup and zone enumeration</li>
+            <li><strong>Curl</strong> - HTTP requests and web server testing</li>
+            <li><strong>Traceroute</strong> - Network path analysis</li>
+            <li><strong>Host</strong> - Simple DNS resolution</li>
+            <li><strong>Ping</strong> - Host availability and latency testing</li>
+          </ul>
+
+          <h3>⚠️ Important Legal Notice</h3>
+          <div style={{
+            backgroundColor: "#161b22",
+            border: "1px solid #f85149",
+            padding: "12px",
+            borderRadius: "4px",
+            fontSize: "13px",
+            marginBottom: "16px"
+          }}>
+            <strong style={{color: "#f85149"}}>⚠️ WARNING:</strong><br/>
+            Only use this tool on networks and systems you own or have explicit written permission to test. Unauthorized security testing is illegal in most jurisdictions. You are responsible for your actions.
+          </div>
+
+          <h3>🚀 How to Get Started</h3>
+          <ol style={{fontSize: "14px", lineHeight: "1.8"}}>
+            <li>Select a tool from the dropdown</li>
+            <li>Enter your target (domain, IP, CIDR range)</li>
+            <li>Choose options using the checkboxes OR edit the args manually</li>
+            <li>Click "▶️ Run" to execute the scan</li>
+            <li>View live output in the terminal below</li>
+            <li>Click "❓ Help & Guide" for detailed info about each tool</li>
+          </ol>
+
+          <h3>💡 Pro Tips</h3>
+          <ul style={{fontSize: "13px", lineHeight: "1.6"}}>
+            <li>Checkboxes auto-build command-line arguments</li>
+            <li>You can override/edit arguments in the "Custom Arguments" field</li>
+            <li>Recent job results appear in the sidebar</li>
+            <li>Each tool has its own set of optimized options</li>
+            <li>Click "❓ Help & Guide" button for tool-specific guides</li>
+          </ul>
+
+          <div style={{marginTop: "24px", display: "flex", gap: "12px"}}>
+            <button 
+              className="button btn-primary" 
+              onClick={completeOnboarding}
+              style={{flex: 1}}
+            >
+              ✅ Got it! Let me start
+            </button>
+            <button 
+              className="button btn-ghost" 
+              onClick={() => { completeOnboarding(); setShowHelp(true); }}
+              style={{flex: 1}}
+            >
+              📚 Show Tool Guide
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Help Panel Component
+  const HelpPanel = () => {
+    const toolDef = TOOL_OPTIONS[tool];
+    if (!toolDef || !toolDef.fullGuide) return null;
+
+    const guide = toolDef.fullGuide;
+
+    return (
+      <div style={{
+        position: "fixed",
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: "rgba(0,0,0,0.85)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000
+      }}>
+        <div style={{
+          backgroundColor: "#0d1117",
+          border: "1px solid #30363d",
+          borderRadius: "8px",
+          padding: "32px",
+          maxWidth: "700px",
+          maxHeight: "85vh",
+          overflow: "auto",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.9)"
+        }}>
+          <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px"}}>
+            <h2 style={{marginTop: 0, color: "#58a6ff"}}>{toolDef.name} — Complete Guide</h2>
+            <button 
+              className="button btn-ghost" 
+              onClick={() => setShowHelp(false)}
+              style={{padding: "4px 8px", fontSize: "14px"}}
+            >
+              ✕ Close
+            </button>
+          </div>
+
+          <div style={{borderBottom: "1px solid #30363d", paddingBottom: "16px", marginBottom: "16px"}}>
+            <p><strong>📝 Description:</strong> {toolDef.description}</p>
+          </div>
+
+          <div style={{marginBottom: "16px"}}>
+            <h4 style={{color: "#79c0ff"}}>❓ What does it do?</h4>
+            <p>{guide.what}</p>
+          </div>
+
+          <div style={{marginBottom: "16px"}}>
+            <h4 style={{color: "#79c0ff"}}>⏰ When to use it</h4>
+            <p>{guide.when}</p>
+          </div>
+
+          <div style={{marginBottom: "16px"}}>
+            <h4 style={{color: "#79c0ff"}}>📚 Usage Examples</h4>
+            <ul style={{backgroundColor: "#161b22", padding: "12px", borderRadius: "4px", fontSize: "12px", fontFamily: "monospace", color: "#79c0ff"}}>
+              {guide.examples.map((ex, i) => (
+                <li key={i} style={{marginBottom: "6px"}}>{ex}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div style={{marginBottom: "16px", backgroundColor: "#161b22", padding: "12px", borderRadius: "4px", borderLeft: "3px solid #f85149"}}>
+            <h4 style={{marginTop: 0, color: "#f85149"}}>⚠️ Risk Level & Warnings</h4>
+            <p style={{marginBottom: 0}}>{guide.risks}</p>
+          </div>
+
+          <div style={{marginTop: "24px", display: "flex", gap: "12px"}}>
+            <button 
+              className="button btn-primary" 
+              onClick={() => setShowHelp(false)}
+              style={{flex: 1}}
+            >
+              ✅ Close
+            </button>
+            <button 
+              className="button btn-ghost" 
+              onClick={() => {
+                setShowHelp(false);
+                // Scroll to options area
+                setTimeout(() => {
+                  document.querySelector(".tool-options")?.scrollIntoView({ behavior: "smooth" });
+                }, 100);
+              }}
+              style={{flex: 1}}
+            >
+              ▶️ Go to Tool
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   async function runTool() {
     setLogs([]);
@@ -242,8 +518,31 @@ export default function App() {
 
   return (
     <div className="container">
+      {showOnboarding && <OnboardingModal />}
+      {showHelp && <HelpPanel />}
+      
       <div className="card">
-        <h2>🛠️ Cyber Tool Kit — Advanced Options</h2>
+        <div style={{display: "flex", justifyContent: "space-between", alignItems: "center"}}>
+          <h2 style={{marginTop: 0}}>🛠️ Cyber Tool Kit</h2>
+          <div style={{display: "flex", gap: "8px"}}>
+            <button 
+              className="button btn-ghost" 
+              onClick={() => setShowOnboarding(true)}
+              title="View onboarding"
+              style={{padding: "6px 12px", fontSize: "14px"}}
+            >
+              ℹ️ Start
+            </button>
+            <button 
+              className="button btn-ghost" 
+              onClick={() => setShowHelp(true)}
+              title="View detailed tool guides"
+              style={{padding: "6px 12px", fontSize: "14px"}}
+            >
+              ❓ Help & Guide
+            </button>
+          </div>
+        </div>
         
         <div className="row" style={{marginTop:12}}>
           <div style={{flex: 1}}>
@@ -271,7 +570,9 @@ export default function App() {
 
             {/* Tool-Specific Options */}
             {showOptions && (
-              <ToolOptionsBuilder tool={tool} onArgsChange={setArgsText} />
+              <div className="tool-options">
+                <ToolOptionsBuilder tool={tool} onArgsChange={setArgsText} />
+              </div>
             )}
 
             {/* Custom Args Override */}
