@@ -57,3 +57,7 @@ results/
 # OS
 .DS_Store
 Thumbs.db
+
+localStorage.setItem('cyber-kit-visited', 'false');
+location.reload();
+document.querySelector('.tool-options') !== null

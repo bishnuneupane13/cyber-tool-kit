@@ -180,10 +180,13 @@ const TOOL_OPTIONS = {
 
 // Legacy presets for quick launch
 const PRESETS = {
-  nmap: { label: "Nmap quick (-sV 1-1000)", args: ["-sV","-p","1-1000","TARGET"] },
-  masscan: { label: "Masscan 1-1000", args: ["-p","1-1000","--rate","1000","TARGET"] },
+  nmap_quick: { label: "Nmap quick (-sV ports 1-1000)", args: ["-sV","-p","1-1000","TARGET"] },
+  nmap_full: { label: "Nmap full (-A -sV -p-)", args: ["-A","-sV","-p-","TARGET"] },
+  masscan_quick: { label: "Masscan 1-1000", args: ["-p","1-1000","--rate","1000","TARGET"] },
+  masscan_full: { label: "Masscan full (all ports)", args: ["-p-","--rate","10000","TARGET"] },
   whois: { label: "whois lookup", args: ["TARGET"] },
   dig: { label: "dig DNS", args: ["+short","TARGET"] },
+  curl_get: { label: "Curl GET", args: ["-L","TARGET"] },
 };
 
 function splitArgs(raw) {
@@ -252,17 +255,43 @@ export default function App() {
   const [running, setRunning] = useState(false);
   const [jobs, setJobs] = useState([]);
   const [showOptions, setShowOptions] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(localStorage.getItem("cyber-kit-visited") ? false : true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [agreementAccepted, setAgreementAccepted] = useState(false);
   const terminalRef = useRef(null);
 
   useEffect(()=>{ refreshJobs(); }, []);
 
-  // Mark onboarding as seen
-  const completeOnboarding = () => {
+  // Mark onboarding as seen (used after successful registration)
+  const markOnboardingSeen = () => {
     localStorage.setItem("cyber-kit-visited", "true");
     setShowOnboarding(false);
   };
+
+  // Check agreement status on mount
+  useEffect(() => {
+    async function checkAgreement() {
+      try {
+        const r = await axios.get(`${API_BASE}/agreement`);
+        if (r && r.data && r.data.accepted) {
+          setAgreementAccepted(true);
+          // hide onboarding if previously marked seen
+          if (!localStorage.getItem("cyber-kit-visited")) {
+            localStorage.setItem("cyber-kit-visited", "true");
+          }
+        } else {
+          setAgreementAccepted(false);
+          // show onboarding if not seen
+          if (!localStorage.getItem("cyber-kit-visited")) {
+            setShowOnboarding(true);
+          }
+        }
+      } catch (e) {
+        console.error('agreement check failed', e);
+      }
+    }
+    checkAgreement();
+  }, []);
 
   function applyPreset(t) {
     const p = PRESETS[t];
@@ -351,20 +380,43 @@ export default function App() {
             <li>Click "❓ Help & Guide" button for tool-specific guides</li>
           </ul>
 
-          <div style={{marginTop: "24px", display: "flex", gap: "12px"}}>
+          <div style={{marginTop: "12px"}}>
+            <label style={{display: 'flex', gap: 10, alignItems: 'center'}}>
+              <input type="checkbox" id="agree" defaultChecked={false} />
+              <span style={{fontSize: '13px'}}>I have read and accept the rules and legal notice above</span>
+            </label>
+          </div>
+
+          <div style={{marginTop: "18px", display: "flex", gap: "12px"}}>
+            <input id="onboard-name" className="input" placeholder="Your name (required)" style={{flex:1}} />
             <button 
               className="button btn-primary" 
-              onClick={completeOnboarding}
-              style={{flex: 1}}
+              onClick={async () => {
+                const name = document.getElementById('onboard-name')?.value?.trim();
+                const ok = document.getElementById('agree')?.checked;
+                if (!name || !ok) {
+                  alert('Please enter your name and accept the agreement to continue.');
+                  return;
+                }
+                try {
+                  await axios.post(`${API_BASE}/user`, { name });
+                  setAgreementAccepted(true);
+                  markOnboardingSeen();
+                } catch (e) {
+                  console.error('register failed', e);
+                  alert('Failed to register user. See console for details.');
+                }
+              }}
+              style={{padding: '8px 14px'}}
             >
-              ✅ Got it! Let me start
+              ✅ Accept & Continue
             </button>
             <button 
               className="button btn-ghost" 
-              onClick={() => { completeOnboarding(); setShowHelp(true); }}
-              style={{flex: 1}}
+              onClick={() => { setShowHelp(true); }}
+              style={{padding: '8px 14px'}}
             >
-              📚 Show Tool Guide
+              📚 Tool Guide
             </button>
           </div>
         </div>
@@ -467,6 +519,12 @@ export default function App() {
 
   async function runTool() {
     setLogs([]);
+    // ensure agreement accepted before running
+    if (!agreementAccepted) {
+      setShowOnboarding(true);
+      setLogs(prev => [...prev, "ERROR: Agreement not accepted — please accept onboarding rules before running tools."]);
+      return;
+    }
     setRunning(true);
     const argsArr = splitArgs(argsText).map(a => a.replace(/TARGET/g, target));
     try {

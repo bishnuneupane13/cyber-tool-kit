@@ -268,6 +268,14 @@ def api_user():
     print(f"\n✅ User '{name}' registered successfully!")
     return jsonify({"success": True, "name": name})
 
+
+@app.route("/api/agreement", methods=["GET"])
+def api_agreement():
+    """Return whether any user has accepted the agreement."""
+    accepted = bool(USERS)
+    users = list(USERS.keys()) if accepted else []
+    return jsonify({"accepted": accepted, "users": users})
+
 # All tools are Python-based and available after pip install
 AVAILABLE_TOOLS = {name: info["cmd"] for name, info in TOOL_INFO.items()}
 
