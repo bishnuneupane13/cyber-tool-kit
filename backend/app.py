@@ -13,6 +13,7 @@ import requests
 from urllib.parse import urlparse
 from flask_cors import CORS
 import hashlib
+import json
 
 # Config
 RESULT_DIR = os.path.join(os.getcwd(), "results")
@@ -23,6 +24,19 @@ API_KEY = os.environ.get("API_KEY")  # optional, set in env if you want
 # Global settings
 USERS = {}
 CURRENT_USER = None  # Store currently logged-in user
+USERS_FILE = os.path.join(RESULT_DIR, "users.json")
+
+# Load users from disk so agreement persists across restarts
+try:
+    import json
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, dict):
+                USERS.update(data)
+except Exception:
+    # ignore load errors and start with empty users
+    USERS = {}
 
 # OS-specific settings
 IS_WINDOWS = platform.system() == 'Windows'
@@ -264,7 +278,14 @@ def api_user():
         "agreed_at": datetime.now(timezone.utc).isoformat(),
         "last_active": datetime.now(timezone.utc).isoformat()
     }
-    
+
+    # persist users to disk
+    try:
+        with open(USERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(USERS, f, indent=2)
+    except Exception as e:
+        print(f"Failed to persist users: {e}")
+
     print(f"\n✅ User '{name}' registered successfully!")
     return jsonify({"success": True, "name": name})
 
